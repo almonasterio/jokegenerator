@@ -11,30 +11,61 @@ export default class JokeList extends Component {
     constructor(props){
         super(props);
         this.state ={
-            jokes: []
+            jokes: JSON.parse(window.localStorage.getItem("jokes") || "[]"),
+            loading:false
         }
+        
         this.handleVote = this.handleVote.bind(this)
+        this.getJokes=this.getJokes.bind(this)
+        this.handleClick=this.handleClick.bind(this)
         
     }
-    async componentDidMount() {
-        let jokes=[]
-        while (jokes.length<this.props.numJokes) {
-            let res = await axios.get(`https://icanhazdadjoke.com/`, {headers: {Accept: "application/json"}});
-            jokes.push({id: uuid(), joke: res.data.joke, votes:0})
-        }
-        this.setState({jokes : jokes})
+   componentDidMount() {
+       if (this.state.jokes.length===0) this.getJokes();
+    }
+
+    async getJokes() {
+         let jokes = []
+         while (jokes.length < this.props.numJokes) {
+             let res = await axios.get(`https://icanhazdadjoke.com/`, {
+                 headers: {
+                     Accept: "application/json"
+                 }
+             });
+             jokes.push({
+                 id: uuid(),
+                 joke: res.data.joke,
+                 votes: 0
+             })
+         }
+         this.setState(st => ({
+             jokes: [...st.jokes, ...jokes],
+             loading: false
+         }),() => window.localStorage.setItem("jokes", JSON.stringify(this.state.jokes))
+         )
     }
     handleVote(id, delta) {
         this.setState(st=>({
-            jokes: st.jokes.map(j=> j.id==id? {...j, votes:j.votes + delta} : j)
+            jokes: st.jokes.map(j=> j.id===id? {...j, votes:j.votes + delta} : j)
 
 
-        })
+        }),
+        () => window.localStorage.setItem("jokes",JSON.stringify(this.state.jokes))
         )
     }
+      handleClick() {
+          this.setState({loading:true},this.getJokes)
+      }
 
     render() {
-        console.log(this.state.jokes)
+        if(this.state.loading) {
+            return (
+                <div className='JokeList-spinner'>
+                    <i className='far fa-8x fa-laugh fa-spin' />
+                <h1 className='JokeList-title'>Loading...</h1>
+                </div>
+            )
+        }
         return (
             <div className="JokeList">
             <div div className = "JokeList-sidebar">
